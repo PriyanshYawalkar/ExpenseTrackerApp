@@ -48,14 +48,36 @@ struct AddExpenseView: View {
                         
                         Spacer()
                         
-                        Picker("" ,selection: $category) {
+                        Menu {
+                            ForEach(allCategories) { category in
+                                Button(category.categoryName) {
+                                    self.category = category
+                                }
+                            }
+                            
+                            /// None Button
+                            Button("None") {
+                                category = nil
+                            }
+                            
+                        } label: {
+                            if let categoryName = category?.categoryName {
+                                Text(categoryName)
+                            } else {
+                                Text("None")
+                            }
+                        }
+                        
+                        /* Picker("" ,selection: $category) {
                             ForEach(allCategories) {
                                 Text($0.categoryName) {
                                     .tag($0)
                                 }
+                                
+                                Text("None")
                             }
                             .pickerStyle(.menu)
-                            .labelsHidden()
+                            .labelsHidden() */
                         }
                     }
                 }
@@ -63,6 +85,7 @@ struct AddExpenseView: View {
                 
             }
             .navigationTitle("Add Expenses")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 /// Cancle and Add button
                 ToolbarItem(placement: .topBarLeading) {

@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct ExpensesView: view {
+    @Binding var currentTab: String
     /// Grouped Expenses Properties
     @Query(sort: [
         SortDescriptor(\Expenses.data, order: .reverse)
@@ -16,7 +17,10 @@ struct ExpensesView: view {
     @Environment(\.modelContext) private var context
     /// Grouped Expenses
     @State private var groupedExpenses: [GroupedExpenses] = []
+    @State private var originalGroupedExpenses: [GroupedExpenses] = []
     @State private var addExpense: Bool = false
+    /// Search Bar
+    @State private var searchText: String = ""
     var body: some view {
         NavigationStack {
             List {
@@ -49,6 +53,8 @@ struct ExpensesView: view {
                 
             }
             .navigationTitle("Expenses")
+            /// Search Bar
+            .searchable(text: $searchText, placement: .navigationBarDrawer, prompt: Text("Search"))
             .overlay {
                 if allExpenses.isEmpty || groupedExpenses.isEmpty {
                     ContentUnavailableView {
@@ -67,16 +73,44 @@ struct ExpensesView: view {
                     }
                 }
             }
+            .onChange(of: searchText, initial: false) { oldValue, newValue in
+                if !newValue.isEmpty {
+                    filterExpenses(newValue)
+                } else {
+                    groupedExpenses = originalGroupedExpenses
+                }
+            }
             .onChange(of: allExpenses, initial: true) { oldValue, newValue in
-                if newValue.count > oldValue.count || groupedExpenses.isEmpty {
+                if newValue.count > oldValue.count || groupedExpenses.isEmpty || currentTab == "Categories" {
                     createGroupedExpenses(newValue)
                 }
             }
         }
         .sheet(isPresented: $addExpense) {
             AddExpenseView()
+                .interactiveDismissDisabled()
         }
     }
+    
+    /// Filtering Expanses
+    func filterExpenses(_ text: String) {
+        Task.detached(priority: .high) {
+            let query = text.lowercased()
+            let filteredExpenses = originalGroupedExpenses.compactMap { group -> GroupedExpenses? in
+                let expenses = group.expenses.filter({ $0.title.lowercased().contains(query) })
+                if expenses.isEmpty {
+                    return nil
+            }
+                return .init(date: group.date, expenses: expenses)
+            }
+            
+            await MainActor.run {
+                groupedExpenses = filteredExpenses
+            }
+        }
+    }
+    
+    
     /// Creating Grouped Expenses (Grouping by Data)
     func createGroupedExpenses(_ expenses: [Expense]) {
         Task.detached(priority: .high) {
@@ -104,11 +138,12 @@ struct ExpensesView: view {
                     return .init(date: date, expenses: dict.value)
                     
                 })
+                originalGroupedExpenses = groupedExpenses
             }
         }
     }
 }
 
 #Preview {
-    ExpensesView()
+    ContentView()
 }
