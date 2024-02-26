@@ -11,7 +11,7 @@ struct ContentView: View {
     ///view properties
     @State private var currentTab: String = "Expenses"
     var body: some View {
-        TabView(selsction: $currentTab) {
+        TabView(selection: $currentTab) {
             ExpensesView(currentTab: $currentTab)
                 .tag("Expenses")
                 .tabItem{
